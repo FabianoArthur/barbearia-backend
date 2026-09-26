@@ -1,0 +1,380 @@
+# Implementation Progress -- Barbearia Backend
+
+Last updated: 2026-03-12
+
+================================================================================
+## MILESTONE STATUS
+================================================================================
+
+Phase 1 -- Core System                                           [COMPLETE]
+Phase 2 -- Financial & Dashboards                                [COMPLETE]
+Phase 3 -- UX & Visualization                       [BACKEND DONE, FE PENDING]
+Phase 4 -- Public Booking, Notifications & Automation            [COMPLETE]
+
+================================================================================
+## TECH STACK
+================================================================================
+
+Runtime:          NestJS + Prisma + PostgreSQL 17
+Auth:             JWT (access + refresh tokens) with cookie-based transport
+Queue/Jobs:       BullMQ (Redis-backed)
+Caching:          Redis 7 via cache-manager-ioredis-yet
+Real-time:        Server-Sent Events (SSE)
+WhatsApp:         Twilio and Z-API provider implementations
+API Docs:         Swagger/OpenAPI at /docs
+Validation:       class-validator + class-transformer (runtime), Biome (lint/format)
+Security:         bcrypt, CSRF guard, ThrottlerModule (20 req/60s), AES-256 encryption
+Containerization: Docker Compose (PostgreSQL 17 + Redis 7-alpine)
+
+================================================================================
+## IMPLEMENTED FEATURES
+================================================================================
+
+### Auth & Users
+  [x] Login, register, logout
+  [x] JWT access tokens + refresh tokens (cookie-based)
+  [x] CSRF guard on mutating endpoints
+  [x] Role-based guards (BARBER, MANAGER, SUPER_ADMIN)
+  [x] Users paginated list with role filter, search, sorting
+  [x] Soft deletes on User
+
+### Establishments
+  [x] CRUD (create, read, update, delete)
+  [x] Address, lat/lng for map visualization
+  [x] Monthly cost tracking
+
+### Services
+  [x] CRUD with soft deletes
+  [x] Notes field
+  [x] M2M relationship: Service <-> Barber (via establishment)
+  [x] List by establishment, list by barber
+
+### Barbers
+  [x] CRUD with commission config (default 50%)
+  [x] List by establishment, list by service
+  [x] Set services for a barber (PUT /barbers/:id/services)
+
+### Clients
+  [x] CRUD
+  [x] CPF validation (isValidCpf, normalizeCpf)
+  [x] Phone validation (isValidBrazilianPhone, normalizePhoneE164)
+  [x] CPF and phone encrypted at rest (AES-256, deterministic for lookups)
+  [x] Unique constraint: [cpf, establishmentId]
+  [x] List by establishment
+
+### Scheduling
+  [x] Working hours management (CRUD per barber per weekday)
+  [x] Time off management (CRUD per barber per date)
+  [x] Schedule overrides (CRUD per barber per date range)
+  [x] Availability calculation (respects working hours, overrides, time offs, existing bookings)
+  [x] Conflict prevention on appointment creation
+
+### Appointments
+  [x] Create, read, update status, soft delete
+  [x] Status machine: SCHEDULED > CONFIRMATION_PENDING > CONFIRMED > IN_PROGRESS > DONE
+  [x] Terminal states: CANCELED, NO_SHOW
+  [x] Status transitions validated (invalid transitions rejected)
+  [x] Unique 6-character code per appointment
+  [x] Price/commission snapshots at creation
+  [x] Paginated list with filters (establishment, barber, date, status)
+  [x] Barber daily summary (bookings, completed count, commission total)
+  [x] AppointmentAuditLog for every status transition
+
+### Public Booking
+  [x] No-auth endpoints for booking flow
+  [x] List establishments, services, barbers (public)
+  [x] Check barber working hours and available slots (public)
+  [x] Create booking (public)
+  [x] Confirm by code
+  [x] Cancel by code
+  [x] Reschedule by code
+
+### Payments
+  [x] Payment model: PENDING > COMPLETED > REFUNDED | FAILED
+  [x] Methods: CASH, PIX, CREDIT_CARD, DEBIT_CARD
+  [x] Confirm pending payment
+  [x] Refund (total or partial) with reason tracking
+  [x] List payments (paginated)
+  [x] List refunds, refund details
+  [x] Payment by appointment lookup
+
+### Finance & Analytics
+  [x] Barber earnings summary
+  [x] Dashboard overview (KPIs)
+  [x] Revenue analytics (by period, barber, service)
+  [x] Barber performance analytics
+  [x] Service performance analytics
+  [x] Customer analytics (new vs returning, frequency)
+  [x] Capacity utilization metrics
+  [x] Financial breakdown (revenue vs expenses vs profit)
+  [x] Forecasting (trend-based revenue prediction)
+  [x] Time-series data for charts
+  [x] Report export (CSV/JSON)
+
+### Expenses
+  [x] CRUD (create, list filtered, update, delete)
+  [x] Categories: RENT, SUPPLIES, UTILITIES, MAINTENANCE, SALARY, OTHER
+  [x] Per establishment, optionally per barber
+
+### Platform Fees
+  [x] Fee config CRUD (per establishment)
+  [x] Fee types: PERCENTAGE, FLAT, TIERED, HYBRID
+  [x] Fee reconciliation (expected vs actual, mismatch reporting)
+
+### Notifications (WhatsApp)
+  [x] Twilio provider implementation
+  [x] Z-API provider implementation
+  [x] Booking confirmation messages (automatic)
+  [x] Reminder messages (30 min before appointment)
+  [x] Queue-based sending via BullMQ with retries
+  [x] Confirmation cron (every 5 min)
+  [x] Reminder recovery cron (every 15 min)
+  [x] Idempotency via Redis locks + reminderSentAt tracking
+  [x] Manual send endpoints (confirmation and reminder)
+
+### Background Jobs (BullMQ + Cron)
+  [x] appointment-lifecycle queue:
+      - mark-late: every 10 min, flags overdue CONFIRMED appointments
+      - auto-no-show: every 15 min, transitions to NO_SHOW 30 min after end
+      - daily-sweep: daily, cancels SCHEDULED >48h without confirmation
+  [x] appointment-reminders queue:
+      - send-reminder: WhatsApp reminder with Redis lock
+
+### Real-Time (SSE)
+  [x] GET /sse/barber/:barberId/dashboard -- streams booking status changes
+  [x] JWT-secured, barber-scoped
+
+### Audit Log
+  [x] Domain events: booking.created, booking.status_changed, booking.deleted,
+      refund.created, commission.calculated
+  [x] AuditLogListener persists to AuditLog table automatically
+  [x] Fields: entityType, entityId, action, oldValue (JSON), newValue (JSON), userId
+
+### Security & Infrastructure
+  [x] bcrypt password hashing
+  [x] CSRF guard (CsrfGuard on mutating endpoints with cookie auth)
+  [x] Rate limiting (ThrottlerModule: 20 req/60s)
+  [x] AES-256 encryption for PII (CPF, phone)
+  [x] Soft deletes (User, Service, Appointment)
+  [x] DomainError + DomainErrorCode enum
+  [x] Global AllExceptionsFilter (DomainError -> HTTP)
+  [x] Redis caching (cache-manager-ioredis-yet)
+  [x] Composite database indexes on appointments, payments, expenses
+  [x] Materialized view: finance_daily_summary
+  [x] Swagger/OpenAPI at /docs
+
+### Database Migrations Applied
+  - 0002_add_appointment_code
+  - 0003_add_availability_composite_index
+  - 20260209050542_finance_dashboard
+  - 20260209051942_cancellation_fees
+  - 20260210000000_add_reminder_sent_at
+  - 20260210161949_add_payment_model
+  - 20260210164404_payment_as_revenue_source
+  - 20260215000000_add_soft_deletes
+  - 20260215000100_service_belongs_to_barber
+  - 20260215000200_add_service_notes_and_address
+  - 20260215000300_add_audit_log
+  - 20260215000400_add_performance_indexes
+  - 20260216000000_add_refresh_token
+  - 20260216100000_service_to_establishment_m2m
+
+================================================================================
+## PENDING / TODO
+================================================================================
+
+### Features Pending
+  [ ] Block booking creation beyond 1 month in the future
+  [ ] Rate limit: max 5 confirmation attempts per IP per 10 minutes
+  [ ] Log all confirmation attempts (audit trail for rate limiting)
+  [ ] Cancellation WhatsApp notification on booking deletion
+  [ ] Block deletion of barber with future bookings
+  [ ] Block deletion of establishment with future bookings
+
+### Refactors Pending
+  [ ] Establishment uniqueness validation (prevent duplicate address/location)
+  [ ] Expenses CQRS (separate command and query models)
+  [ ] Standardize domain error messages for barber/establishment deletion
+
+### Tests Pending
+  [ ] Unit tests: finance calculations (revenue, commission, forecasts)
+  [ ] Unit tests: phone/name validation logic
+  [ ] Integration tests: users list pagination with 10k users
+  [ ] Integration tests: barber daily dashboard with 100+ bookings
+  [ ] E2E tests: full booking flow (public page > confirmation > completion)
+  [ ] E2E tests: refund flow (request > approval > refund)
+
+### Infrastructure Pending
+  [ ] Cancellation notification job (trigger when booking is deleted)
+  [ ] WhatsApp provider rate limiting (token bucket, respect provider limits)
+  [ ] Alert if WhatsApp failure rate > 5%
+  [ ] Dead-letter queue for failed WhatsApp messages
+  [ ] Audit log retention policy (2 years for financial compliance)
+  [ ] Automated database backups (before production)
+  [ ] Monthly restore tests (before production)
+
+### Frontend Pending (separate repo)
+  [ ] Calendar UI for appointment selection
+  [ ] Map visualization of establishments
+  [ ] UI polish and responsive design
+
+================================================================================
+## API OVERVIEW
+================================================================================
+
+Global prefix: /api
+Swagger docs:  /docs
+
+### Auth (/api/auth)
+  POST   /auth/login                        Login (sets auth cookies)
+  POST   /auth/register                     Register user
+  POST   /auth/refresh                      Refresh access token
+  POST   /auth/logout                       Logout (clears cookies)
+  GET    /auth/csrf-token                   Get CSRF token
+  GET    /auth/me                           Current user info
+
+### Appointments (/api/appointments)
+  GET    /appointments                      Paginated list with filters
+  GET    /appointments/barber/:barberId/daily-summary   Barber daily summary
+  GET    /appointments/:id                  Get by ID
+  POST   /appointments                      Create appointment
+  PATCH  /appointments/:id/status           Update status
+  POST   /appointments/:id/start            Start (IN_PROGRESS)
+  POST   /appointments/:id/finish           Finish (DONE)
+  POST   /appointments/:id/no-show          Mark no-show
+  POST   /appointments/:id/cancel           Cancel
+  DELETE /appointments/:id                  Soft delete
+
+### SSE (/api/sse)
+  GET    /sse/barber/:barberId/dashboard    Real-time barber dashboard stream
+
+### Public Booking (/api/public/booking)
+  GET    /public/booking/establishments                              List establishments
+  GET    /public/booking/establishments/:id                          Get establishment
+  GET    /public/booking/establishments/:id/services                 Services by establishment
+  GET    /public/booking/establishments/:id/services/:serviceId/barbers   Barbers for service
+  GET    /public/booking/establishments/:id/barbers                  Barbers by establishment
+  GET    /public/booking/barbers/:barberId/working-hours             Barber working hours
+  GET    /public/booking/barbers/:barberId/availability              Available time slots
+  POST   /public/booking/appointments                                Create public booking
+  POST   /public/booking/appointments/:code/confirm                  Confirm by code
+  POST   /public/booking/appointments/:code/cancel                   Cancel by code
+  POST   /public/booking/appointments/:code/reschedule               Reschedule by code
+
+### Establishments (/api/establishments)
+  GET    /establishments                    List all
+  GET    /establishments/:id                Get by ID
+  POST   /establishments                    Create
+  PATCH  /establishments/:id                Update
+  DELETE /establishments/:id                Delete
+
+### Barbers (/api/barbers)
+  GET    /barbers                           List all
+  GET    /barbers/establishment/:establishmentId   By establishment
+  GET    /barbers/service/:serviceId        By service
+  GET    /barbers/:id                       Get by ID
+  POST   /barbers                           Create
+  PATCH  /barbers/:id                       Update
+  PUT    /barbers/:id/services              Set barber services
+  DELETE /barbers/:id                       Delete
+
+### Clients (/api/clients)
+  GET    /clients                           List all
+  GET    /clients/establishment/:establishmentId   By establishment
+  GET    /clients/:id                       Get by ID
+  POST   /clients                           Create
+  DELETE /clients/:id                       Delete
+
+### Services (/api/services)
+  GET    /services                          List all
+  GET    /services/establishment/:establishmentId   By establishment
+  GET    /services/barber/:barberId         By barber
+  GET    /services/:id                      Get by ID
+  POST   /services                          Create
+  PATCH  /services/:id                      Update
+  DELETE /services/:id                      Soft delete
+
+### Schedule (/api/schedule)
+  GET    /schedule/working-hours/:barberId  Get working hours
+  POST   /schedule/working-hours            Create working hour
+  DELETE /schedule/working-hours/:id        Delete working hour
+  GET    /schedule/time-off/:barberId       Get time offs
+  POST   /schedule/time-off                 Create time off
+  DELETE /schedule/time-off/:id             Delete time off
+  GET    /schedule/overrides/:barberId      Get overrides
+  POST   /schedule/overrides                Create override
+  DELETE /schedule/overrides/:id            Delete override
+
+### Finance (/api/finance)
+  GET    /finance/barber/:barberId/summary                    Barber earnings summary
+  GET    /finance/dashboard                                   Dashboard overview
+  GET    /finance/analytics/revenue                           Revenue analytics
+  GET    /finance/analytics/barbers                           Barber performance
+  GET    /finance/analytics/trends                            Time-series trends
+  GET    /finance/analytics/services                          Service performance
+  GET    /finance/analytics/customers                         Customer analytics
+  GET    /finance/analytics/capacity                          Capacity utilization
+  GET    /finance/analytics/breakdown                         Financial breakdown
+  GET    /finance/analytics/forecast                          Revenue forecasting
+  GET    /finance/reports/export                               Export report (CSV/JSON)
+  POST   /finance/reconciliation/:establishmentId             Run fee reconciliation
+  GET    /finance/reconciliation/:establishmentId/report      Reconciliation report
+
+### Finance Expenses (/api/finance/expenses)
+  POST   /finance/expenses                  Create expense
+  GET    /finance/expenses                  List expenses (filtered)
+  PUT    /finance/expenses/:id              Update expense
+  DELETE /finance/expenses/:id              Delete expense
+
+### Finance Fees (/api/finance/fees)
+  GET    /finance/fees                      List fee configs
+  POST   /finance/fees/:establishmentId     Create fee config
+  PUT    /finance/fees/:feeId               Update fee config
+
+### Payments (/api/payments)
+  GET    /payments                          Paginated list
+  GET    /payments/refunds                  List refunds
+  GET    /payments/refunds/:id              Refund details
+  GET    /payments/appointment/:appointmentId   Payment by appointment
+  GET    /payments/:id                      Get by ID
+  PATCH  /payments/:id/confirm              Confirm payment
+  PATCH  /payments/:id/refund               Refund (total/partial)
+
+### Users (/api/users)
+  GET    /users                             Paginated list with filters
+  GET    /users/me                          Current user
+  GET    /users/establishment/:establishmentId   By establishment
+  GET    /users/:id                         Get by ID
+  PATCH  /users/:id                         Update
+  DELETE /users/:id                         Soft delete
+
+### Notifications (/api/notifications)
+  POST   /notifications/send-confirmation/:appointmentId   Manual WhatsApp confirmation
+  POST   /notifications/send-reminder/:appointmentId       Manual WhatsApp reminder
+
+================================================================================
+## DATA MODELS (Prisma)
+================================================================================
+
+Enums:
+  Role:              BARBER, MANAGER, SUPER_ADMIN
+  AppointmentStatus: SCHEDULED, CONFIRMATION_PENDING, CONFIRMED, IN_PROGRESS,
+                     DONE, CANCELED, NO_SHOW
+  FeeType:           PERCENTAGE, FLAT, TIERED, HYBRID
+  PaymentMethod:     CASH, PIX, CREDIT_CARD, DEBIT_CARD
+  PaymentStatus:     PENDING, COMPLETED, REFUNDED, FAILED
+  ExpenseCategory:   RENT, SUPPLIES, UTILITIES, MAINTENANCE, SALARY, OTHER
+
+Models:
+  User, RefreshToken, Establishment, Barber, Client, Service,
+  Appointment, BarberWorkingHour, BarberTimeOff, BarberScheduleOverride,
+  AppointmentAuditLog, AuditLog, PlatformFeeConfig, Payment, Expense
+
+Key relations:
+  User        -> Establishment (optional), Barber (1:1), RefreshToken (1:N)
+  Barber      -> Establishment, Services (M2M), WorkingHours, TimeOffs, Overrides
+  Client      -> Establishment, Appointments
+  Service     -> Establishment, Barbers (M2M)
+  Appointment -> Establishment, Barber, Client, Service, Payment (1:1), AuditLogs
+  Payment     -> Appointment (1:1), Establishment
+  Expense     -> Establishment, Barber (optional)

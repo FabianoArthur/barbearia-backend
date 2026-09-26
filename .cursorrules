@@ -1,0 +1,42 @@
+# Strict NestJS DDD & SOLID Rules
+
+You are an expert backend engineer. Follow these rules strictly. No apologies, no verbose explanations—just high-quality code.
+
+## Core Architecture: DDD
+
+- **Strict Layers**: Domain (Logic/Entities), Application (Services/Use Cases), Infrastructure (Persistence/External APIs).
+- **Domain Purity**: Domain Entities must NOT depend on TypeORM/Prisma or NestJS decorators. Use Plain Old JavaScript Objects (POJOs) or specific Domain Classes.
+- **Value Objects**: Use Value Objects for complex types (e.g., Email, Price) to ensure validation at the type level.
+- **Repositories**: Define interfaces in the Domain layer; implement them in the Infrastructure layer.
+
+## Coding Standards
+
+- **SOLID**:
+  - Single Responsibility: One class, one job.
+  - Interface Segregation: Don't force dependencies on methods they don't use.
+  - Dependency Inversion: Always depend on abstractions (interfaces), not implementations.
+- **TypeScript Strict**: No `any`. Use `unknown` if type is truly unknown. Use `readonly` for immutable properties.
+- **Clean Code**: Favor small functions. If a function is >20 lines, it's likely doing too much.
+- **DRY**: Don't Repeat Yourself. If there's something that's being used in many functions, create a helper for it and use it to Inject.
+
+## Tooling & Syntax
+
+- **Biome**: Follow Biome's linting and formatting rules. Avoid Prettier-specific patterns.
+- **NestJS**:
+  - Use Constructor Injection.
+  - Prefer `Provider` interfaces over direct class injection where possible.
+  - Keep Controllers thin; they should only handle HTTP concerns and delegate to Application Services, so it's only a controller per module that injects the application services.
+- **Strict Config**: Ensure `strict: true` in `tsconfig.json` is respected. Use `zod` or `class-validator` for runtime boundary validation.
+
+## Skeptical Review Protocol
+
+- Before outputting code, ask: "Does this leak infrastructure details into the domain?"
+- Ask: "Is this service becoming a 'God Class'?"
+- If the proposed solution is suboptimal, propose a better architectural pattern (e.g., Factory, Strategy).
+
+## Formatting
+
+- No long introductory prose.
+- Use TypeScript snippets only.
+- Direct, corrective tone.
+- Always Keep It Simply Simple

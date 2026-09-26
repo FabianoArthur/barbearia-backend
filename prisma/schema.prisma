@@ -1,0 +1,344 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  BARBER
+  MANAGER
+  SUPER_ADMIN
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMATION_PENDING
+  CONFIRMED
+  IN_PROGRESS
+  DONE
+  CANCELED
+  NO_SHOW
+}
+
+enum FeeType {
+  PERCENTAGE
+  FLAT
+  TIERED
+  HYBRID
+}
+
+enum PaymentMethod {
+  CASH
+  PIX
+  CREDIT_CARD
+  DEBIT_CARD
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  REFUNDED
+  FAILED
+}
+
+enum ExpenseCategory {
+  RENT
+  SUPPLIES
+  UTILITIES
+  MAINTENANCE
+  SALARY
+  OTHER
+}
+
+model User {
+  id              String    @id @default(uuid())
+  name            String
+  email           String    @unique
+  passwordHash    String
+  role            Role
+  establishmentId String?
+  establishment   Establishment? @relation(fields: [establishmentId], references: [id])
+
+  barber          Barber?
+  refreshTokens   RefreshToken[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Establishment {
+  id          String   @id @default(uuid())
+  name        String
+  address     String?
+  lat         Float?
+  lng         Float?
+  monthlyCost Float    @default(0)
+
+  users       User[]
+  barbers     Barber[]
+  clients     Client[]
+  services    Service[]
+  appointments Appointment[]
+  platformFeeConfigs PlatformFeeConfig[]
+  payments    Payment[]
+  expenses    Expense[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Barber {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  establishmentId   String
+  commissionPercent Int      @default(50)
+
+  user              User          @relation(fields: [userId], references: [id])
+  establishment     Establishment @relation(fields: [establishmentId], references: [id])
+
+  services          Service[]
+  workingHours      BarberWorkingHour[]
+  timeOffs          BarberTimeOff[]
+  scheduleOverrides BarberScheduleOverride[]
+  appointments      Appointment[]
+  expenses          Expense[]
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Client {
+  id              String   @id @default(uuid())
+  establishmentId String
+  name            String
+  cpf             String
+  phone           String?
+
+  establishment   Establishment @relation(fields: [establishmentId], references: [id])
+  appointments    Appointment[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([cpf, establishmentId])
+}
+
+model Service {
+  id              String    @id @default(uuid())
+  establishmentId String
+  name            String
+  price           Float
+  durationMinutes Int
+  notes           String?
+
+  establishment   Establishment @relation(fields: [establishmentId], references: [id])
+  barbers         Barber[]
+  appointments    Appointment[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+}
+
+model Appointment {
+  id              String   @id @default(uuid())
+  code            String   @unique @default("")
+  establishmentId String
+  barberId        String
+  clientId        String
+  serviceId       String
+
+  startsAt        DateTime
+  endsAt          DateTime
+  status          AppointmentStatus @default(SCHEDULED)
+
+  priceSnapshot               Float
+  barberAmountSnapshot        Float
+  establishmentAmountSnapshot Float
+  tipAmount                   Float    @default(0)
+  cancellationFeeCharged      Boolean  @default(false)
+  cancellationFeeAmount       Float    @default(0)
+
+  confirmationSentAt DateTime?
+  confirmedAt        DateTime?
+  reminderSentAt     DateTime?
+  startedAt          DateTime?
+  finishedAt         DateTime?
+  publicCancelCode   String?   @unique @default(uuid())
+  whatsappMessageId  String?
+  whatsappStatus     String?
+  addressSnapshot    String?
+
+  establishment   Establishment @relation(fields: [establishmentId], references: [id])
+  barber          Barber        @relation(fields: [barberId], references: [id])
+  client          Client        @relation(fields: [clientId], references: [id])
+  service         Service       @relation(fields: [serviceId], references: [id])
+
+  payment         Payment?
+  auditLogs       AppointmentAuditLog[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  @@index([barberId, startsAt])
+  @@index([establishmentId, startsAt])
+  @@index([status, startsAt])
+  @@index([barberId, status, startsAt, endsAt])
+  @@index([establishmentId, status, startsAt])
+}
+
+model BarberWorkingHour {
+  id        String  @id @default(uuid())
+  barberId  String
+  weekday   Int
+  startTime String
+  endTime   String
+
+  barber    Barber  @relation(fields: [barberId], references: [id])
+
+  @@unique([barberId, weekday, startTime, endTime])
+}
+
+model BarberTimeOff {
+  id        String   @id @default(uuid())
+  barberId  String
+  date      DateTime
+  startTime String?
+  endTime   String?
+  reason    String?
+
+  barber    Barber   @relation(fields: [barberId], references: [id])
+
+  @@index([barberId, date])
+}
+
+model BarberScheduleOverride {
+  id        String   @id @default(uuid())
+  barberId  String
+
+  startDate DateTime
+  endDate   DateTime
+
+  weekday   Int?
+
+  startTime String
+  endTime   String
+
+  reason    String?
+
+  barber    Barber   @relation(fields: [barberId], references: [id])
+
+  @@index([barberId, startDate, endDate])
+}
+
+model AppointmentAuditLog {
+  id            String            @id @default(uuid())
+  appointmentId String
+  fromStatus    AppointmentStatus
+  toStatus      AppointmentStatus
+  changedBy     String?
+  changedAt     DateTime          @default(now())
+
+  appointment   Appointment       @relation(fields: [appointmentId], references: [id])
+
+  @@index([appointmentId, changedAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  entityType String   @db.VarChar(50)
+  entityId   String
+  action     String   @db.VarChar(50)
+  oldValue   Json?
+  newValue   Json
+  userId     String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model PlatformFeeConfig {
+  id              String    @id @default(uuid())
+  establishmentId String
+  feeType         FeeType   @default(PERCENTAGE)
+  percentageRate  Float?
+  flatAmount      Float?
+  minFee          Float?
+  maxFee          Float?
+  includesTips    Boolean   @default(false)
+  effectiveFrom   DateTime
+  effectiveTo     DateTime?
+  isActive        Boolean   @default(true)
+
+  establishment   Establishment @relation(fields: [establishmentId], references: [id])
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([establishmentId, isActive, effectiveFrom])
+}
+
+model Payment {
+  id              String         @id @default(uuid())
+  appointmentId   String         @unique
+  establishmentId String
+  amount          Float
+  tipAmount       Float          @default(0)
+  platformFeeAmount Float        @default(0)
+  method          PaymentMethod?
+  status          PaymentStatus  @default(PENDING)
+  paidAt          DateTime?
+  refundedAt      DateTime?
+  refundAmount    Float?
+  refundReason    String?
+  notes           String?
+
+  appointment     Appointment    @relation(fields: [appointmentId], references: [id])
+  establishment   Establishment  @relation(fields: [establishmentId], references: [id])
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([establishmentId, status])
+  @@index([establishmentId, paidAt])
+  @@index([status, createdAt])
+}
+
+model Expense {
+  id              String          @id @default(uuid())
+  establishmentId String
+  barberId        String?
+  category        ExpenseCategory
+  description     String
+  amount          Float
+  date            DateTime
+
+  establishment   Establishment   @relation(fields: [establishmentId], references: [id])
+  barber          Barber?         @relation(fields: [barberId], references: [id])
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([establishmentId, date])
+  @@index([barberId, date])
+  @@index([category, date])
+}

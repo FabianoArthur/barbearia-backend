@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150" role="img" aria-labelledby="t">
+  <title id="t">Sample barber avatar (fictional placeholder)</title>
+  <rect width="150" height="150" rx="75" fill="#e5e7eb"/>
+  <circle cx="75" cy="58" r="26" fill="#6b7280"/>
+  <path d="M28 128c6-28 26-42 47-42s41 14 47 42" fill="#6b7280"/>
+</svg>

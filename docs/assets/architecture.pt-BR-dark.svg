@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 600" width="880" height="600" role="img" aria-labelledby="title desc" lang="pt-BR">
+<title id="title">Arquitetura da API de barbearia</title>
+<desc id="desc">O cliente agenda um horário na página pública (a equipe usa o painel). Toda requisição passa por helmet e CORS, pelo limite de taxa e pela validação dos DTOs; as rotas da equipe também exigem a checagem de CSRF e os guards de JWT em cookie e de papéis. O módulo de agendamento público confere a disponibilidade e a máquina de estados, grava o agendamento via Prisma no PostgreSQL (CPF e telefone cifrados com AES-256-GCM) e enfileira um job atrasado do BullMQ no Redis. Trinta minutos antes do horário, o worker de lembrete envia um WhatsApp ao cliente via Twilio.</desc>
+<style>
+text{font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;fill:#e6edf3}
+.b{font-size:14px;font-weight:600}
+.h{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.m{font-size:12.5px;fill:#9198a1}
+.code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;font-size:12.5px;fill:#aab2ff}
+.sepc{fill:#9198a1;font-size:14px}
+.bg{fill:#161b22;stroke:#30363d}
+.card{fill:#0d1117;stroke:#3d444d}
+.chip{fill:#0d1117;stroke:#3a4386}
+.dz{fill:#1b2040;stroke:#3a4386}
+.dzt{fill:#aab2ff}
+.mz{fill:#1c2128;stroke:#30363d}
+.e{fill:none;stroke:#6e7681;stroke-width:1.5;stroke-linejoin:round}
+.hl{fill:none;stroke:#fb923c;stroke-width:2;stroke-linejoin:round;stroke-dasharray:100 100;stroke-dashoffset:100;opacity:0}
+.pk,.halo{fill:none;stroke:#fb923c;stroke-linecap:round;stroke-dasharray:0 200;opacity:0}
+.pk{stroke-width:9}
+.halo{stroke-width:18;stroke-opacity:.25}
+.glow{fill:none;stroke:#fb923c;stroke-width:1.5;opacity:0}
+@keyframes m0{0%,1.50%{opacity:0;stroke-dashoffset:0}3.00%{opacity:1;stroke-dashoffset:0}12.00%{opacity:1;stroke-dashoffset:-100}14.00%,100%{opacity:0;stroke-dashoffset:-100}}
+@keyframes t0{0%,1.50%{opacity:0;stroke-dashoffset:100}3.00%{opacity:.9;stroke-dashoffset:100}12.00%{opacity:.9;stroke-dashoffset:0}18.00%,100%{opacity:0;stroke-dashoffset:0}}
+.s0{animation:m0 10.0s linear infinite}.l0{animation:t0 10.0s linear infinite}
+@keyframes m1{0%,11.50%{opacity:0;stroke-dashoffset:0}13.00%{opacity:1;stroke-dashoffset:0}19.00%{opacity:1;stroke-dashoffset:-100}21.00%,100%{opacity:0;stroke-dashoffset:-100}}
+@keyframes t1{0%,11.50%{opacity:0;stroke-dashoffset:100}13.00%{opacity:.9;stroke-dashoffset:100}19.00%{opacity:.9;stroke-dashoffset:0}25.00%,100%{opacity:0;stroke-dashoffset:0}}
+.s1{animation:m1 10.0s linear infinite}.l1{animation:t1 10.0s linear infinite}
+@keyframes m2{0%,25.50%{opacity:0;stroke-dashoffset:0}27.00%{opacity:1;stroke-dashoffset:0}35.00%{opacity:1;stroke-dashoffset:-100}37.00%,100%{opacity:0;stroke-dashoffset:-100}}
+@keyframes t2{0%,25.50%{opacity:0;stroke-dashoffset:100}27.00%{opacity:.9;stroke-dashoffset:100}35.00%{opacity:.9;stroke-dashoffset:0}41.00%,100%{opacity:0;stroke-dashoffset:0}}
+.s2{animation:m2 10.0s linear infinite}.l2{animation:t2 10.0s linear infinite}
+@keyframes m3{0%,35.50%{opacity:0;stroke-dashoffset:0}37.00%{opacity:1;stroke-dashoffset:0}45.00%{opacity:1;stroke-dashoffset:-100}47.00%,100%{opacity:0;stroke-dashoffset:-100}}
+@keyframes t3{0%,35.50%{opacity:0;stroke-dashoffset:100}37.00%{opacity:.9;stroke-dashoffset:100}45.00%{opacity:.9;stroke-dashoffset:0}51.00%,100%{opacity:0;stroke-dashoffset:0}}
+.s3{animation:m3 10.0s linear infinite}.l3{animation:t3 10.0s linear infinite}
+@keyframes m4{0%,51.50%{opacity:0;stroke-dashoffset:0}53.00%{opacity:1;stroke-dashoffset:0}61.00%{opacity:1;stroke-dashoffset:-100}63.00%,100%{opacity:0;stroke-dashoffset:-100}}
+@keyframes t4{0%,51.50%{opacity:0;stroke-dashoffset:100}53.00%{opacity:.9;stroke-dashoffset:100}61.00%{opacity:.9;stroke-dashoffset:0}67.00%,100%{opacity:0;stroke-dashoffset:0}}
+.s4{animation:m4 10.0s linear infinite}.l4{animation:t4 10.0s linear infinite}
+@keyframes m5{0%,61.50%{opacity:0;stroke-dashoffset:0}63.00%{opacity:1;stroke-dashoffset:0}83.00%{opacity:1;stroke-dashoffset:-100}85.00%,100%{opacity:0;stroke-dashoffset:-100}}
+@keyframes t5{0%,61.50%{opacity:0;stroke-dashoffset:100}63.00%{opacity:.9;stroke-dashoffset:100}83.00%{opacity:.9;stroke-dashoffset:0}89.00%,100%{opacity:0;stroke-dashoffset:0}}
+.s5{animation:m5 10.0s linear infinite}.l5{animation:t5 10.0s linear infinite}
+@keyframes g0{0%,18.00%{opacity:0;stroke-width:1}19.00%,46.00%{opacity:1;stroke-width:2}49.00%,100%{opacity:0;stroke-width:1}}.g0{animation:g0 10.0s linear infinite}
+@media (prefers-reduced-motion:reduce){.pk,.halo,.hl,.glow{animation:none;display:none}}
+</style>
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 z" fill="#6e7681"/></marker></defs>
+<rect x="0.5" y="0.5" width="879" height="599" rx="16" class="bg"/>
+<rect x="90" y="20" width="300" height="48" rx="24" class="card"/>
+<text x="240" y="49" text-anchor="middle"><tspan class="b">Painel da equipe</tspan><tspan class="m" dx="8">gerentes · barbeiros</tspan></text>
+<rect x="490" y="20" width="300" height="48" rx="24" class="card"/>
+<text x="640" y="49" text-anchor="middle"><tspan class="b">Página de agendamento</tspan><tspan class="m" dx="8">clientes, sem login</tspan></text>
+<rect x="24" y="96" width="832" height="248" rx="14" class="dz"/>
+<text x="44" y="120" class="h dzt">API NestJS</text>
+<rect x="44" y="132" width="792" height="40" rx="10" class="card"/>
+<text x="125.5" y="157" class="m" text-anchor="middle" style="fill:#e6edf3">helmet · CORS</text>
+<text x="207.1" y="157" class="sepc" text-anchor="middle">›</text>
+<text x="292.5" y="157" class="m" text-anchor="middle" style="fill:#e6edf3">limite de taxa</text>
+<text x="377.9" y="157" class="sepc" text-anchor="middle">›</text>
+<text x="424.5" y="157" class="m" text-anchor="middle" style="fill:#e6edf3">CSRF</text>
+<text x="471.1" y="157" class="sepc" text-anchor="middle">›</text>
+<text x="587.5" y="157" class="m" text-anchor="middle" style="fill:#e6edf3">JWT em cookie + papéis</text>
+<text x="704.0" y="157" class="sepc" text-anchor="middle">›</text>
+<text x="770.0" y="157" class="m" text-anchor="middle" style="fill:#e6edf3">validação</text>
+<rect x="44" y="208" width="188" height="32" rx="8" class="chip"/>
+<text x="138" y="229" class="code" text-anchor="middle">auth</text>
+<rect x="244" y="208" width="188" height="32" rx="8" class="chip"/>
+<text x="338" y="229" class="code" text-anchor="middle">users</text>
+<rect x="444" y="208" width="188" height="32" rx="8" class="chip"/>
+<text x="538" y="229" class="code" text-anchor="middle">public-booking</text>
+<rect x="644" y="208" width="188" height="32" rx="8" class="chip"/>
+<text x="738" y="229" class="code" text-anchor="middle">appointments</text>
+<rect x="44" y="250" width="188" height="32" rx="8" class="chip"/>
+<text x="138" y="271" class="code" text-anchor="middle">establishments</text>
+<rect x="244" y="250" width="188" height="32" rx="8" class="chip"/>
+<text x="338" y="271" class="code" text-anchor="middle">barbers</text>
+<rect x="444" y="250" width="188" height="32" rx="8" class="chip"/>
+<text x="538" y="271" class="code" text-anchor="middle">schedule</text>
+<rect x="644" y="250" width="188" height="32" rx="8" class="chip"/>
+<text x="738" y="271" class="code" text-anchor="middle">clients</text>
+<rect x="44" y="292" width="188" height="32" rx="8" class="chip"/>
+<text x="138" y="313" class="code" text-anchor="middle">services</text>
+<rect x="244" y="292" width="188" height="32" rx="8" class="chip"/>
+<text x="338" y="313" class="code" text-anchor="middle">payments</text>
+<rect x="444" y="292" width="188" height="32" rx="8" class="chip"/>
+<text x="538" y="313" class="code" text-anchor="middle">finance</text>
+<rect x="644" y="292" width="188" height="32" rx="8" class="chip"/>
+<text x="738" y="313" class="code" text-anchor="middle">notifications</text>
+<rect x="444" y="208" width="188" height="32" rx="8" class="glow g0"/>
+<rect x="24" y="372" width="832" height="208" rx="14" class="mz"/>
+<text x="44" y="396" class="h" style="fill:#9198a1">infraestrutura</text>
+<rect x="44" y="416" width="240" height="110" rx="10" class="card"/>
+<text x="64" y="446" class="b">PostgreSQL</text>
+<text x="64" y="474" class="m">Prisma · 16 migrações</text>
+<text x="64" y="496" class="m">CPF / telefone AES-256-GCM</text>
+<rect x="320" y="416" width="240" height="110" rx="10" class="card"/>
+<text x="340" y="446" class="b">Redis</text>
+<text x="340" y="474" class="m">filas BullMQ com atraso</text>
+<text x="340" y="496" class="m">cache de analytics</text>
+<rect x="596" y="416" width="240" height="110" rx="10" class="card"/>
+<text x="616" y="446" class="b">Worker de lembrete</text>
+<text x="616" y="474" class="m">30 min antes do horário</text>
+<text x="616" y="496" class="m">WhatsApp via Twilio</text>
+<path d="M640,68 V132" class="e" marker-end="url(#ah)"/>
+<path d="M538,172 V208" class="e" marker-end="url(#ah)"/>
+<path d="M164,344 V416" class="e" marker-end="url(#ah)"/>
+<path d="M440,344 V416" class="e" marker-end="url(#ah)"/>
+<path d="M560,471 H596" class="e" marker-end="url(#ah)"/>
+<path d="M836,471 H866 V44 H790" class="e" marker-end="url(#ah)"/>
+<path d="M240,68 V132" class="e" marker-end="url(#ah)"/>
+<text x="828" y="36" class="m" text-anchor="middle">lembrete</text>
+<path d="M640,68 V132" pathLength="100" class="hl l0"/>
+<path d="M640,68 V132" pathLength="100" class="halo s0"/>
+<path d="M640,68 V132" pathLength="100" class="pk s0"/>
+<path d="M538,172 V208" pathLength="100" class="hl l1"/>
+<path d="M538,172 V208" pathLength="100" class="halo s1"/>
+<path d="M538,172 V208" pathLength="100" class="pk s1"/>
+<path d="M164,344 V416" pathLength="100" class="hl l2"/>
+<path d="M164,344 V416" pathLength="100" class="halo s2"/>
+<path d="M164,344 V416" pathLength="100" class="pk s2"/>
+<path d="M440,344 V416" pathLength="100" class="hl l3"/>
+<path d="M440,344 V416" pathLength="100" class="halo s3"/>
+<path d="M440,344 V416" pathLength="100" class="pk s3"/>
+<path d="M560,471 H596" pathLength="100" class="hl l4"/>
+<path d="M560,471 H596" pathLength="100" class="halo s4"/>
+<path d="M560,471 H596" pathLength="100" class="pk s4"/>
+<path d="M836,471 H866 V44 H790" pathLength="100" class="hl l5"/>
+<path d="M836,471 H866 V44 H790" pathLength="100" class="halo s5"/>
+<path d="M836,471 H866 V44 H790" pathLength="100" class="pk s5"/>
+</svg>
